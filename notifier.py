@@ -86,13 +86,17 @@ def superduperscraper(model: SteamDeckModel, csv_dir: str, country_code: str, we
     
     roleIdWithCountry = role_ids.get(model.package_id, "") if role_ids else ""
     
-    oldvalue = ""
-    # Get previous availability from file
-    if os.path.isfile(f"{model.package_id}_{country_code}.txt"):
-        with open(f"{model.package_id}_{country_code}.txt", "r") as file_read:
-            oldvalue = file_read.read()
+    old_state = None
+    state_file = f"{model.package_id}_{country_code}.json"
+    # Get previous state from JSON file
+    if os.path.isfile(state_file):
+        with open(state_file, "r", encoding="utf-8") as file_read:
+            try:
+                old_state = json.load(file_read)
+            except json.JSONDecodeError:
+                print(f"Warning: Could not parse existing state file {state_file}; ignoring previous state")
     
-    print("Previous value: " + oldvalue)
+    print("Previous value: " + (json.dumps(old_state) if old_state is not None else ""))
 
     try:
         # Make request to Steam API
@@ -100,29 +104,36 @@ def superduperscraper(model: SteamDeckModel, csv_dir: str, country_code: str, we
         response.raise_for_status()
         
         # Get availability status
-        availability = str(response.json()["response"]["inventory_available"])
+        response_data = response.json()["response"]
+        availability = bool(response_data["inventory_available"])
+        high_pending = bool(response_data["high_pending_orders"])
         current_time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
         
         print(f"{current_time} >> {model.version}GB {'OLED' if model.is_oled else 'LCD'} Result: {availability}")
+        print(f"High pending orders: {high_pending}")
         
+        current_state = {"available": availability, "high_pending": high_pending}
+
         # Save new availability to file
-        with open(f"{model.package_id}_{country_code}.txt", "w") as file:
-            file.write(availability)
+        with open(state_file, "w", encoding="utf-8") as file:
+            json.dump(current_state, file)
         
         # Check if status changed
-        status_changed = oldvalue != availability and oldvalue != ""
+        status_changed = old_state is not None and old_state != current_state
         
         # Log data
-        log_availability_data(model.version, model.package_id, availability == "True", model.is_oled, csv_dir, country_code)
+        log_availability_data(model.version, model.package_id, availability, model.is_oled, csv_dir, country_code)
         
         # Send Discord notification only on status change
         if status_changed:
             display_type = "OLED" if model.is_oled else "LCD"
             condition_type = "new" if model.is_new else "refurbished"
-            if availability == "True":
+            if availability:
                 # Include role ping only if role ID exists
                 role_ping = f" <@&{roleIdWithCountry}>" if roleIdWithCountry else ""
                 webhook.content = f"{condition_type} {model.version}GB {display_type} steam deck available{role_ping}"
+                if not high_pending:
+                    webhook.content += f"\nNOT HIGH PENDING ORDERS!"
             else:
                 webhook.content = f"{condition_type} {model.version}GB {display_type} steam deck not available"
             webhook.execute()
