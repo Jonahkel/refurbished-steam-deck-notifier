@@ -25,7 +25,7 @@ import json
 
 
 # Default values
-DEFAULT_COUNTRY_CODE = 'DE'
+DEFAULT_COUNTRY_CODE = 'US'
 DEFAULT_WEBHOOK_URL = "https://discord.com/api/webhooks/some_webhook"
 
 class SteamDeckModel:
