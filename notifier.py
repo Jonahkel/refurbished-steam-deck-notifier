@@ -87,7 +87,9 @@ def superduperscraper(model: SteamDeckModel, csv_dir: str, country_code: str, we
     roleIdWithCountry = role_ids.get(model.package_id, "") if role_ids else ""
     
     old_state = None
-    state_file = f"{model.package_id}_{country_code}.json"
+    state_dir = "logs"
+    os.makedirs(state_dir, exist_ok=True)
+    state_file = os.path.join(state_dir, f"{model.package_id}_{country_code}.json")
     # Get previous state from JSON file
     if os.path.isfile(state_file):
         with open(state_file, "r", encoding="utf-8") as file_read:
