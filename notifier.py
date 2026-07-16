@@ -39,6 +39,9 @@ SENDER_EMAIL = os.getenv("DEFAULT_SENDER_EMAIL", '')
 PASSWORD = os.getenv("PASSWORD", '')
 DEFAULT_RECEIVER_EMAIL = os.getenv("DEFAULT_RECEIVER_EMAIL", '')
 
+SMTP_SERVER = "smtp-steam-deck-notifier.alwaysdata.net"
+SMPT_PORT = 465
+
 
 class SteamDeckModel:
     def __init__(self, version: str, package_id: str, is_oled: bool, is_new: bool = False):
@@ -77,7 +80,7 @@ def send_email_notification(model: SteamDeckModel, display_type, high_pending, r
 
     try:
         # Connect to Alwaysdata's local SMTP server on port 25 (no auth required)
-        with smtplib.SMTP('localhost', 465) as server:
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMPT_PORT) as server:
             server.login(SENDER_EMAIL, PASSWORD)
             server.sendmail(SENDER_EMAIL, receiver_email, msg.as_string())
         print(f"[{datetime.now()}] Email notification sent to {receiver_email}!")
