@@ -97,7 +97,8 @@ def superduperscraper(model: SteamDeckModel, csv_dir: str, country_code: str, we
                 old_state = json.load(file_read)
             except json.JSONDecodeError:
                 print(f"Warning: Could not parse existing state file {state_file}; ignoring previous state")
-    
+
+    print(f"====== {model.version}GB {'OLED' if model.is_oled else 'LCD'} =======")
     print("Previous value: " + (json.dumps(old_state) if old_state is not None else ""))
 
     try:
@@ -111,8 +112,8 @@ def superduperscraper(model: SteamDeckModel, csv_dir: str, country_code: str, we
         high_pending = bool(response_data["high_pending_orders"])
         current_time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
         
-        print(f"{current_time} >> {model.version}GB {'OLED' if model.is_oled else 'LCD'} Result: {availability}")
-        print(f"High pending orders: {high_pending}")
+        print(f"{current_time} >> Result: {availability}")
+        print(f"High pending orders: {high_pending}\n")
         
         current_state = {"available": availability, "high_pending": high_pending}
 
