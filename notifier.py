@@ -35,8 +35,8 @@ DEFAULT_WEBHOOK_URL = os.getenv('WEBHOOK_URL', '')
 # Default values
 DEFAULT_COUNTRY_CODE = 'US'
 DEFAULT_ROLE_MAPPING = "roles.json"
-DEFAULT_SENDER_EMAIL = os.getenv("SENDER_EMAIL", '')
-DEFAULT_RECEIVER_EMAIL = os.getenv("RECEIVER_EMAIL", '')
+DEFAULT_SENDER_EMAIL = os.getenv("DEFAULT_SENDER_EMAIL", '')
+DEFAULT_RECEIVER_EMAIL = os.getenv("DEFAULT_RECEIVER_EMAIL", '')
 
 
 class SteamDeckModel:
@@ -46,22 +46,22 @@ class SteamDeckModel:
         self.is_oled = is_oled
         self.is_new = is_new
 
-def send_email_notification(model_name, package_id, high_pending, receiver_email):
+def send_email_notification(model: SteamDeckModel, display_type, high_pending, receiver_email):
     """Sends an email notification."""
     if not DEFAULT_SENDER_EMAIL or not receiver_email: return
 
     if high_pending:
-        subject = f"🚨 STEAM DECK RESTOCK: {model_name} in stock!"
+        subject = f"🚨 STEAM DECK RESTOCK: {model.version}GB {display_type} in stock!"
         body = (
-            f"The Certified Refurbished {model_name} (Package ID: {package_id}) "
+            f"The Certified Refurbished {model.version}GB {display_type} (Package ID: {model.package_id}) "
             f"is currently IN STOCK!\n\n"
             f"Buy it immediately before it sells out here:\n"
             f"https://store.steampowered.com/sale/steamdeckrefurbished"
         )
     else:
-        subject = f"🚨🚨🚨 STEAM DECK RESTOCK: No high pending orders for {model_name}!"
+        subject = f"🚨🚨🚨 STEAM DECK RESTOCK: No high pending orders for {model.version}GB {display_type}!"
         body = (
-            f"The Certified Refurbished {model_name} (Package ID: {package_id}) "
+            f"The Certified Refurbished {model.version}GB {display_type} (Package ID: {model.package_id}) "
             f"is currently IN STOCK!\n\n"
             f"Plus, there aren't high pending orders!\n"
             f"Buy it immediately before it sells out here:\n"
@@ -184,7 +184,7 @@ def superduperscraper(model: SteamDeckModel, csv_dir: str, country_code: str, we
             else:
                 webhook.content = f"{condition_type} {model.version}GB {display_type} steam deck not available{role_ping}"
             webhook.execute()
-            send_email_notification(model.version, model.package_id, high_pending, receiver_email)
+            send_email_notification(model, display_type, high_pending, receiver_email)
             
     except requests.RequestException as e:
         print(f"Error fetching data for {model.version}GB: {e}")
