@@ -171,7 +171,11 @@ def superduperscraper(model: SteamDeckModel, csv_dir: str, country_code: str, we
             json.dump(current_state, file)
         
         # Check if status changed
-        status_changed = old_state != current_state
+        status_changed = (
+            old_state is None 
+            or old_state["available"] != availability
+            or (availability and old_state["high_pending"] != high_pending)
+        )
         
         # Log data
         log_availability_data(model.version, model.package_id, availability, model.is_oled, csv_dir, country_code)
