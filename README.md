@@ -62,6 +62,7 @@ python steam_deck_checker.py
 * `-h`: Provides list of possible Arguments
 * `--webhook-url`: Discord webhook URL for notifications (defaults to `WEBHOOK_URL` in `.env`)
 * `--webhook-url-new`: Discord webhook URL for new-model notifications (defaults to `WEBHOOK_URL_NEW` in `.env`, or `WEBHOOK_URL` if unset)
+* `--receiver-email`: Email address for SMTP notifications (defaults to `RECEIVER_EMAIL` in `.env`)
 * `--country-code`: Country code for Steam API (default: `DE`, **important**)
 * `--role-mapping`: JSON file containing Discord role mappings (optional)
 * `--csv-dir`: Directory path for daily CSV log files (optional)
@@ -73,6 +74,7 @@ python steam_deck_checker.py \
   --country-code US \
   --webhook-url "https://discord.com/api/webhooks/YOUR_WEBHOOK" \
   --webhook-url-new "https://discord.com/api/webhooks/YOUR_NEW_WEBHOOK" \
+  --receiver-email "you@example.com" \
   --role-mapping roles.json \
   --csv-dir csv-logs
 ```

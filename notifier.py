@@ -24,11 +24,19 @@ import argparse
 import json
 from dotenv import load_dotenv
 
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 
+load_dotenv()
+
+DEFAULT_WEBHOOK_URL = os.getenv('WEBHOOK_URL', '')
 # Default values
 DEFAULT_COUNTRY_CODE = 'US'
 DEFAULT_ROLE_MAPPING = "roles.json"
+DEFAULT_SENDER_EMAIL = os.getenv("SENDER_EMAIL", '')
+DEFAULT_RECEIVER_EMAIL = os.getenv("RECEIVER_EMAIL", '')
 
 
 class SteamDeckModel:
@@ -37,6 +45,42 @@ class SteamDeckModel:
         self.package_id = package_id
         self.is_oled = is_oled
         self.is_new = is_new
+
+def send_email_notification(model_name, package_id, high_pending, receiver_email):
+    """Sends an email notification."""
+    if not DEFAULT_SENDER_EMAIL or not receiver_email: return
+
+    if high_pending:
+        subject = f"🚨 STEAM DECK RESTOCK: {model_name} in stock!"
+        body = (
+            f"The Certified Refurbished {model_name} (Package ID: {package_id}) "
+            f"is currently IN STOCK!\n\n"
+            f"Buy it immediately before it sells out here:\n"
+            f"https://store.steampowered.com/sale/steamdeckrefurbished"
+        )
+    else:
+        subject = f"🚨🚨🚨 STEAM DECK RESTOCK: No high pending orders for {model_name}!"
+        body = (
+            f"The Certified Refurbished {model_name} (Package ID: {package_id}) "
+            f"is currently IN STOCK!\n\n"
+            f"Plus, there aren't high pending orders!\n"
+            f"Buy it immediately before it sells out here:\n"
+            f"https://store.steampowered.com/sale/steamdeckrefurbished"
+        )
+
+    msg = MIMEMultipart()
+    msg['From'] = DEFAULT_SENDER_EMAIL
+    msg['To'] = receiver_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        # Connect to Alwaysdata's local SMTP server on port 25 (no auth required)
+        with smtplib.SMTP('localhost', 25) as server:
+            server.sendmail(DEFAULT_SENDER_EMAIL, receiver_email, msg.as_string())
+        print(f"[{datetime.now()}] Email notification sent to {receiver_email}!")
+    except Exception as e:
+        print(f"[{datetime.now()}] Failed to send email: {e}")
 
 def get_daily_csv_path(csv_dir: str, country_code: str) -> str:
     """Generate the CSV file path for today's date and country"""
@@ -77,7 +121,7 @@ def log_availability_data(version, package_id, available, is_oled, csv_dir: str,
         writer = csv.writer(f)
         writer.writerow([unix_timestamp, version, display_type, package_id, available])
 
-def superduperscraper(model: SteamDeckModel, csv_dir: str, country_code: str, webhook_url: str, role_ids: dict):
+def superduperscraper(model: SteamDeckModel, csv_dir: str, country_code: str, webhook_url: str, role_ids: dict, receiver_email: str):
     # Build Steam API URL with country code
     url = f'https://api.steampowered.com/IPhysicalGoodsService/CheckInventoryAvailableByPackage/v1?origin=https:%2F%2Fstore.steampowered.com&country_code={country_code}&packageid='
     
@@ -140,6 +184,7 @@ def superduperscraper(model: SteamDeckModel, csv_dir: str, country_code: str, we
             else:
                 webhook.content = f"{condition_type} {model.version}GB {display_type} steam deck not available{role_ping}"
             webhook.execute()
+            send_email_notification(model.version, model.package_id, high_pending, receiver_email)
             
     except requests.RequestException as e:
         print(f"Error fetching data for {model.version}GB: {e}")
@@ -161,17 +206,16 @@ def load_role_mapping(role_file: str) -> dict:
 
 def main():
     """Main function to check all Steam Deck models"""
-    load_dotenv()
-
-    default_webhook_url = os.getenv('WEBHOOK_URL', '')
 
     parser = argparse.ArgumentParser(description='Check Steam Deck availability and optionally log to CSV')
     parser.add_argument('--include-new-models', action='store_true', help='Include request for new steam decks (not just refurbs)')
     parser.add_argument('--csv-dir', help='Directory path for daily CSV log files')
-    parser.add_argument('--webhook-url', default=default_webhook_url,
+    parser.add_argument('--webhook-url', default=DEFAULT_WEBHOOK_URL,
                        help='Discord webhook URL for notifications (default: WEBHOOK_URL from .env)')
-    parser.add_argument('--webhook-url-new', default=default_webhook_url,
+    parser.add_argument('--webhook-url-new', default=DEFAULT_WEBHOOK_URL,
                        help='Discord webhook URL for new-model notifications (default: WEBHOOK_URL_NEW from .env, or WEBHOOK_URL if unset)')
+    parser.add_argument('--receiver-email', default=DEFAULT_RECEIVER_EMAIL,
+                       help='Email address to send notifications to (default: RECEIVER_EMAIL from .env)')
     parser.add_argument('--country-code', default=DEFAULT_COUNTRY_CODE, 
                        help=f'Country code for Steam API (default: {DEFAULT_COUNTRY_CODE})')
     parser.add_argument('--role-mapping', default=DEFAULT_ROLE_MAPPING,
@@ -182,6 +226,8 @@ def main():
 
     if args.csv_log:
         print("w: Deprecated: This option is no longer supported (last supported version v2.0.0).")
+
+    receiver_email = args.receiver_email
 
     if not args.webhook_url:
         raise SystemExit('Missing WEBHOOK_URL in .env or --webhook-url')
@@ -237,7 +283,7 @@ def main():
     
     for model in models:
         superduperscraper(model, csv_dir, 
-                         args.country_code, args.webhook_url if not model.is_new or args.webhook_url_new == "" else args.webhook_url_new, role_ids)
+                         args.country_code, args.webhook_url if not model.is_new or args.webhook_url_new == "" else args.webhook_url_new, role_ids, receiver_email)
 
 if __name__ == "__main__":
     main()
