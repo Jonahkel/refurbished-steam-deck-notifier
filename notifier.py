@@ -122,7 +122,7 @@ def superduperscraper(model: SteamDeckModel, csv_dir: str, country_code: str, we
             json.dump(current_state, file)
         
         # Check if status changed
-        status_changed = old_state is not None and old_state != current_state
+        status_changed = old_state != current_state
         
         # Log data
         log_availability_data(model.version, model.package_id, availability, model.is_oled, csv_dir, country_code)
@@ -131,14 +131,14 @@ def superduperscraper(model: SteamDeckModel, csv_dir: str, country_code: str, we
         if status_changed:
             display_type = "OLED" if model.is_oled else "LCD"
             condition_type = "new" if model.is_new else "refurbished"
+            role_ping = f" <@&{roleIdWithCountry}>" if roleIdWithCountry else ""
             if availability:
                 # Include role ping only if role ID exists
-                role_ping = f" <@&{roleIdWithCountry}>" if roleIdWithCountry else ""
                 webhook.content = f"{condition_type} {model.version}GB {display_type} steam deck available{role_ping}"
                 if not high_pending:
                     webhook.content += f"\nNOT HIGH PENDING ORDERS!"
             else:
-                webhook.content = f"{condition_type} {model.version}GB {display_type} steam deck not available"
+                webhook.content = f"{condition_type} {model.version}GB {display_type} steam deck not available{role_ping}"
             webhook.execute()
             
     except requests.RequestException as e:
