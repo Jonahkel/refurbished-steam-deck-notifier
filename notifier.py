@@ -22,11 +22,14 @@ import csv
 from datetime import datetime
 import argparse
 import json
+from dotenv import load_dotenv
+
 
 
 # Default values
 DEFAULT_COUNTRY_CODE = 'US'
-DEFAULT_WEBHOOK_URL = "https://discord.com/api/webhooks/some_webhook"
+DEFAULT_ROLE_MAPPING = "roles.json"
+
 
 class SteamDeckModel:
     def __init__(self, version: str, package_id: str, is_oled: bool, is_new: bool = False):
@@ -74,15 +77,12 @@ def log_availability_data(version, package_id, available, is_oled, csv_dir: str,
         writer = csv.writer(f)
         writer.writerow([unix_timestamp, version, display_type, package_id, available])
 
-def superduperscraper(model: SteamDeckModel, csv_dir: str, country_code: str, webhook_url: str, webhook_url_new: str, role_ids: dict):
+def superduperscraper(model: SteamDeckModel, csv_dir: str, country_code: str, webhook_url: str, role_ids: dict):
     # Build Steam API URL with country code
     url = f'https://api.steampowered.com/IPhysicalGoodsService/CheckInventoryAvailableByPackage/v1?origin=https:%2F%2Fstore.steampowered.com&country_code={country_code}&packageid='
     
-    # Determine which webhook URL to use based on model type
-    active_webhook_url = webhook_url_new if (model.is_new and webhook_url_new) else webhook_url
-    
     # Create Discord webhook
-    webhook = DiscordWebhook(url=active_webhook_url, content="error")
+    webhook = DiscordWebhook(url=webhook_url, content="error")
     
     roleIdWithCountry = role_ids.get(model.package_id, "") if role_ids else ""
     
@@ -160,21 +160,30 @@ def load_role_mapping(role_file: str) -> dict:
 
 def main():
     """Main function to check all Steam Deck models"""
+    load_dotenv()
+
+    default_webhook_url = os.getenv('WEBHOOK_URL', '')
+
     parser = argparse.ArgumentParser(description='Check Steam Deck availability and optionally log to CSV')
     parser.add_argument('--include-new-models', action='store_true', help='Include request for new steam decks (not just refurbs)')
     parser.add_argument('--csv-dir', help='Directory path for daily CSV log files')
+    parser.add_argument('--webhook-url', default=default_webhook_url,
+                       help='Discord webhook URL for notifications (default: WEBHOOK_URL from .env)')
+    parser.add_argument('--webhook-url-new', default=default_webhook_url,
+                       help='Discord webhook URL for new-model notifications (default: WEBHOOK_URL_NEW from .env, or WEBHOOK_URL if unset)')
     parser.add_argument('--country-code', default=DEFAULT_COUNTRY_CODE, 
                        help=f'Country code for Steam API (default: {DEFAULT_COUNTRY_CODE})')
-    parser.add_argument('--webhook-url', default=DEFAULT_WEBHOOK_URL,
-                       help='Discord webhook URL for notifications')
-    parser.add_argument('--webhook-url-new', help='Discord webhook URL for seperate new model notifications (optional, defaults to --webhook-url)')
-    parser.add_argument('--role-mapping', help='JSON file containing package_id to role_id mapping')
+    parser.add_argument('--role-mapping', default=DEFAULT_ROLE_MAPPING,
+                       help=f'JSON file containing package_id to role_id mapping (default: {DEFAULT_ROLE_MAPPING})')
     parser.add_argument('--csv-log', help='Deprecated: This option is no longer supported (last supported version v2.0.0).')
     
     args = parser.parse_args()
 
     if args.csv_log:
         print("w: Deprecated: This option is no longer supported (last supported version v2.0.0).")
+
+    if not args.webhook_url:
+        raise SystemExit('Missing WEBHOOK_URL in .env or --webhook-url')
     
     csv_dir = args.csv_dir if args.csv_dir else ""
     initialize_logs(csv_dir, args.country_code)
@@ -189,7 +198,7 @@ def main():
         print("Logging disabled")
     
     print(f"Country code: {args.country_code}")
-    print(f"Webhook URL: {args.webhook_url}")
+    print("Webhook URL loaded from .env")
     
     # Steam Deck models
     refurbModels = [
@@ -227,7 +236,7 @@ def main():
     
     for model in models:
         superduperscraper(model, csv_dir, 
-                         args.country_code, args.webhook_url, args.webhook_url_new, role_ids)
+                         args.country_code, args.webhook_url if not model.is_new or args.webhook_url_new == "" else args.webhook_url_new, role_ids)
 
 if __name__ == "__main__":
     main()

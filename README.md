@@ -46,7 +46,7 @@ steam_deck_notifier (Linux/macOS)
 Run it via terminal/command prompt:
 
 ```bash
-./steam_deck_notifier --webhook-url "https://discord.com/api/webhooks/YOUR_WEBHOOK"
+./notifier
 ```
 
 You can pass the same arguments as you would for the Python version.
@@ -54,13 +54,14 @@ You can pass the same arguments as you would for the Python version.
 ### Option 2: Run the Python Script
 
 ```bash
-python steam_deck_checker.py --webhook-url "https://discord.com/api/webhooks/YOUR_WEBHOOK"
+python steam_deck_checker.py
 ```
 
 ### Command Line Arguments
 
 * `-h`: Provides list of possible Arguments
-* `--webhook-url`: Discord webhook URL for notifications (**required**)
+* `--webhook-url`: Discord webhook URL for notifications (defaults to `WEBHOOK_URL` in `.env`)
+* `--webhook-url-new`: Discord webhook URL for new-model notifications (defaults to `WEBHOOK_URL_NEW` in `.env`, or `WEBHOOK_URL` if unset)
 * `--country-code`: Country code for Steam API (default: `DE`, **important**)
 * `--role-mapping`: JSON file containing Discord role mappings (optional)
 * `--csv-dir`: Directory path for daily CSV log files (optional)
@@ -71,6 +72,7 @@ python steam_deck_checker.py --webhook-url "https://discord.com/api/webhooks/YOU
 python steam_deck_checker.py \
   --country-code US \
   --webhook-url "https://discord.com/api/webhooks/YOUR_WEBHOOK" \
+  --webhook-url-new "https://discord.com/api/webhooks/YOUR_NEW_WEBHOOK" \
   --role-mapping roles.json \
   --csv-dir csv-logs
 ```
@@ -138,7 +140,7 @@ crontab -e
 Add this line to check every 3 minutes:
 
 ```bash
-*/3 * * * * /path/to/steam_deck_notifier --webhook-url "YOUR_WEBHOOK" >> /path/to/logfile.log 2>&1
+*/3 * * * * /path/to/steam_deck_notifier >> /path/to/logfile.log 2>&1
 ```
 
 ## 📦 Dependencies & Attribution
