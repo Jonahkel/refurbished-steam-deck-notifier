@@ -35,7 +35,8 @@ DEFAULT_WEBHOOK_URL = os.getenv('WEBHOOK_URL', '')
 # Default values
 DEFAULT_COUNTRY_CODE = 'US'
 DEFAULT_ROLE_MAPPING = "roles.json"
-DEFAULT_SENDER_EMAIL = os.getenv("DEFAULT_SENDER_EMAIL", '')
+SENDER_EMAIL = os.getenv("DEFAULT_SENDER_EMAIL", '')
+PASSWORD = os.getenv("PASSWORD", '')
 DEFAULT_RECEIVER_EMAIL = os.getenv("DEFAULT_RECEIVER_EMAIL", '')
 
 
@@ -48,7 +49,7 @@ class SteamDeckModel:
 
 def send_email_notification(model: SteamDeckModel, display_type, high_pending, receiver_email):
     """Sends an email notification."""
-    if not DEFAULT_SENDER_EMAIL or not receiver_email: return
+    if not SENDER_EMAIL or not receiver_email: return
 
     if high_pending:
         subject = f"🚨 STEAM DECK RESTOCK: {model.version}GB {display_type} in stock!"
@@ -69,15 +70,16 @@ def send_email_notification(model: SteamDeckModel, display_type, high_pending, r
         )
 
     msg = MIMEMultipart()
-    msg['From'] = DEFAULT_SENDER_EMAIL
+    msg['From'] = SENDER_EMAIL
     msg['To'] = receiver_email
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
 
     try:
         # Connect to Alwaysdata's local SMTP server on port 25 (no auth required)
-        with smtplib.SMTP('localhost', 25) as server:
-            server.sendmail(DEFAULT_SENDER_EMAIL, receiver_email, msg.as_string())
+        with smtplib.SMTP('localhost', 465) as server:
+            server.login(SENDER_EMAIL, PASSWORD)
+            server.sendmail(SENDER_EMAIL, receiver_email, msg.as_string())
         print(f"[{datetime.now()}] Email notification sent to {receiver_email}!")
     except Exception as e:
         print(f"[{datetime.now()}] Failed to send email: {e}")
