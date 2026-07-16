@@ -185,11 +185,11 @@ def superduperscraper(model: SteamDeckModel, csv_dir: str, country_code: str, we
                 # Include role ping only if role ID exists
                 webhook.content = f"{condition_type} {model.version}GB {display_type} steam deck available{role_ping}"
                 if not high_pending:
-                    webhook.content += f"\nNOT HIGH PENDING ORDERS!"
+                    webhook.content += f"\nNO HIGH PENDING ORDERS!"
+                send_email_notification(model, display_type, high_pending, receiver_email)
             else:
                 webhook.content = f"{condition_type} {model.version}GB {display_type} steam deck not available{role_ping}"
             webhook.execute()
-            send_email_notification(model, display_type, high_pending, receiver_email)
             
     except requests.RequestException as e:
         print(f"Error fetching data for {model.version}GB: {e}")
